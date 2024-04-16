@@ -32,6 +32,8 @@
  //variables to hold cursor coordinates
  int x = 0;
  int y = 0;
+
+ //color data
  uint16_t black = 0x0000;
  uint16_t white = 0xFFFF;
  uint16_t red = 0xF800;
@@ -44,6 +46,8 @@
  uint16_t orange = 0xfd00;
  uint16_t greenDark = 0x05ab;
  uint16_t blueDark = 0x3997;
+ uint16_t color = white;
+ uint16_t color2 = red;
 
 //Software Serial  https://forum.arduino.cc/t/serial-input-basics-updated/382007/3
  #define rxPin 11
@@ -88,6 +92,7 @@
  #define headlightSignal 31
  #define Lite 12
  int headlights = 0;
+ bool headlightStatus = 0;
  
 //VSC control 
  #define VSC_out 5 //pin to control state of VSC 
@@ -231,8 +236,48 @@ void parseData() {      // split the data into its parts
     int3 = atoi(strtokIndx);
 }
 
+//      _ _                               
+//   __| (_)_ __ ___  _ __ ___   ___ _ __ 
+//  / _` | | '_ ` _ \| '_ ` _ \ / _ \ '__|
+// | (_| | | | | | | | | | | | |  __/ |   
+//  \__,_|_|_| |_| |_|_| |_| |_|\___|_|   
 
-
+void dimmer() {  
+  if (headlights == 1) {
+    color = orange;
+    color2 = red;
+    }
+  else {
+    color = white;
+    color2 = white;
+   }                                      
+   tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
+   tft.drawBitmap(0, 68, battSmall, 20, 20, color);
+   tft.drawBitmap(0, 47, coolant, 20, 20, color);
+   tft.drawChar(102,7,0x09,red,black,2);
+   tft.setTextSize(2);
+   tft.setTextColor(red);   
+   tft.setCursor(112,13);
+   tft.print("C");
+   //oil temp gauge
+   tft.fillRect(0,34,2,2,color);
+   tft.fillRect(25,34,2,2,color);
+   tft.fillRect(55,34,2,2,color);
+   tft.fillRect(110,34,2,2,color);
+   tft.fillRect(126,34,2,2,color);
+   tft.fillRect(83,34,2,2,color);
+   tft.fillRect(0,36,128,1,color);
+   tft.setTextColor(color);      
+   tft.setTextSize(1);
+   tft.setCursor(21,39);
+   tft.print(40);
+   tft.setCursor(51,39);
+   tft.print(85);
+   tft.setCursor(75,39);
+   tft.print(130);
+   tft.setCursor(102,39);
+   tft.print(170);
+}
 //   _____ ______ _______ _    _ _____
 //  / ____|  ____|__   __| |  | |  __ \ "/"
 // | (___ | |__     | |  | |  | | |__) |
@@ -248,7 +293,7 @@ void setup()
   analogReference(INTERNAL1V1); // use ianalogReference(INTERNAL)nternal voltage reference
                                 //***CAUTION*** do not connect >1v to any analogRead pin!!!
   
-  //headlights I/O
+  //headlight/TFTbacklight I/O
   pinMode(Lite,OUTPUT);
   digitalWrite(Lite,LOW);
   pinMode(headlightSignal,INPUT);
@@ -289,23 +334,23 @@ void setup()
   tft.fillScreen(black);
   
   //bitmaps, bars, static numbers
-   tft.drawBitmap(0, 0, oil_lamp, 47, 27, orange);
-   tft.drawBitmap(0, 68, battSmall, 20, 20, orange);
-   tft.drawBitmap(0, 47, coolant, 20, 20, orange);
-   tft.drawChar(102,7,0x09,red,black,2);
+   tft.drawBitmap(0, 0, oil_lamp, 47, 27, white);
+   tft.drawBitmap(0, 68, battSmall, 20, 20, white);
+   tft.drawBitmap(0, 47, coolant, 20, 20, white);
+   tft.drawChar(102,7,0x09,white,black,2);
    tft.setTextSize(2);
-   tft.setTextColor(red);   
+   tft.setTextColor(white);   
    tft.setCursor(112,13);
    tft.print("C");
    //oil temp gauge
-   tft.fillRect(0,34,2,2,orange);
-   tft.fillRect(25,34,2,2,orange);
-   tft.fillRect(55,34,2,2,orange);
-   tft.fillRect(110,34,2,2,orange);
-   tft.fillRect(126,34,2,2,orange);
-   tft.fillRect(83,34,2,2,orange);
-   tft.fillRect(0,36,128,1,orange);
-   tft.setTextColor(orange);      
+   tft.fillRect(0,34,2,2,white);
+   tft.fillRect(25,34,2,2,white);
+   tft.fillRect(55,34,2,2,white);
+   tft.fillRect(110,34,2,2,white);
+   tft.fillRect(126,34,2,2,white);
+   tft.fillRect(83,34,2,2,white);
+   tft.fillRect(0,36,128,1,white);
+   tft.setTextColor(white);      
    tft.setTextSize(1);
    tft.setCursor(21,39);
    tft.print(40);
@@ -334,11 +379,16 @@ void loop()
  if ( millis() >= millis10 + 10) {
   headlights = digitalRead(headlightSignal); //check if can delete - if checked in 'if' statement below
   //Serial.println(headlights);
-  if (headlights == 1) {                     //// causes crashing of the TFT >:|
+  if (headlights != headlightStatus) {
+    dimmer();
+  }
+  if (headlights == 1) {
     analogWrite(Lite,50);
+    headlightStatus = 1;
   }
   else {
     analogWrite(Lite,255);
+    headlightStatus = 0;
   }
   millis10 = millis();
  }
@@ -351,8 +401,8 @@ void loop()
   
   //collect data from softSerial
   if (newData == true) {
-      //nudat = 1;  //debugging
-      //Serial.println(nudat);
+      //nudat = 1;              //debugging
+      //Serial.println(nudat);  //
       strcpy(tempChars, receivedChars);
           // this temporary copy is necessary to protect the original data
           //   because strtok() used in parseData() replaces the commas with \0
@@ -390,7 +440,7 @@ void loop()
   //print data
    tft.setTextSize(3);
    if (flash == 0) {
-    tft.setTextColor(red,black);
+    tft.setTextColor(color2);
     }
    if (flash == 1) {
     tft.setTextColor(black,black);
@@ -410,7 +460,7 @@ void loop()
    }
 
   tft.setTextSize(2);
-  tft.setTextColor(red,black);
+  tft.setTextColor(color2);
   //int2
   if (int2 != 0) {
    tft.setCursor(25,53);
