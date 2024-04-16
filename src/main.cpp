@@ -254,9 +254,9 @@ void dimmer() {
    tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
    tft.drawBitmap(0, 68, battSmall, 20, 20, color);
    tft.drawBitmap(0, 47, coolant, 20, 20, color);
-   tft.drawChar(102,7,0x09,red,black,2);
+   tft.drawChar(102,7,0x09,color2,black,2);
    tft.setTextSize(2);
-   tft.setTextColor(red);   
+   tft.setTextColor(color2);   
    tft.setCursor(112,13);
    tft.print("C");
    //oil temp gauge
