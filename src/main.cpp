@@ -385,11 +385,11 @@ void loop()
   if (headlights == 1) {
     analogWrite(Lite,50);
     headlightStatus = 1;
-  }
-  else {
-    analogWrite(Lite,255);
-    headlightStatus = 0;
-  }
+   }
+   else {
+     analogWrite(Lite,255);
+     headlightStatus = 0;
+   } 
   millis10 = millis();
  }
  
@@ -460,8 +460,7 @@ void loop()
    }
 
   tft.setTextSize(2);
-  tft.setTextColor(color2);
-  //int2
+  tft.setTextColor(color2);  //int2
   if (int2 != 0) {
    tft.setCursor(25,53);
    tft.print(int2);
