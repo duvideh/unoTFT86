@@ -1,7 +1,8 @@
 // Arduino MEGA board
 // Adafruit 1.44" 128x128 TFT screen
 // Voltage divider sourced from 12v socket for Battery Voltage
-// Auto-Switch for 86 VSC buttons - all off on startup
+// used internal voltage reference ***CAUTION*** do not connect >1v to any analogRead pin!!!
+// Switch for 86 VSC buttons - all off on startup - external switch to disable
 // softwareSerial for reading data from Nano in glovebox - Expected message: <#,#,#>
 
  #include <Arduino.h>
@@ -22,8 +23,8 @@
  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST); 
 
  //SD Card stuff 
-  SdFat SD; // SD card filesystem
-  Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys 
+SdFat SD; // SD card filesystem
+Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys 
 
  Adafruit_Image       img;        // An image loaded into RAM
  int32_t              width  = 0, // BMP image dimensions
@@ -32,6 +33,8 @@
  //variables to hold cursor coordinates
  int x = 0;
  int y = 0;
+
+ //colours
  uint16_t black = 0x0000;
  uint16_t white = 0xFFFF;
  uint16_t red = 0xF800;
@@ -48,9 +51,7 @@
 //Software Serial  https://forum.arduino.cc/t/serial-input-basics-updated/382007/3
  #define rxPin 11
  #define txPin 42
- // Set up a new SoftwareSerial object
- SoftwareSerial softSerial (rxPin, txPin);
-
+ SoftwareSerial softSerial (rxPin, txPin);   // Set up a new SoftwareSerial object
  const byte numChars = 32;        //32 bit serial buffer
  char receivedChars[numChars];
  char tempChars[numChars];        // temporary array for use when parsing  
@@ -85,8 +86,8 @@
  float r2 = 6.73; //insert second resistor value
  
 //headlight dimming
- #define headlightSignal 31
- #define Lite 12
+ #define headlightSignal 31  //input from Nano
+ #define Lite 12             //output to TFT backlight
  int headlights = 0;
  
 //VSC control 
@@ -279,7 +280,7 @@ void setup()
   stat = reader.drawBMP("/86x128.bmp", tft, 0, 0);
   reader.printStatus(stat);   // How'd we do?     
     
-  analogWrite(Lite,255); //turn on backlight
+  analogWrite(Lite,255); //turn on backlight - after 86x128.bmp first displayed so white screen doesn't appear
   
   delay(1000);
   digitalWrite(VSC_out, HIGH); //'hold down' VSC button
@@ -334,7 +335,7 @@ void loop()
  if ( millis() >= millis10 + 10) {
   headlights = digitalRead(headlightSignal); //check if can delete - if checked in 'if' statement below
   //Serial.println(headlights);
-  if (headlights == 1) {                     //// causes crashing of the TFT >:|
+  if (headlights == 1) {                     
     analogWrite(Lite,50);
   }
   else {
