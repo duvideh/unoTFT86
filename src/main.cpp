@@ -71,11 +71,9 @@
  boolean newData = false;
  
  //for blanking screen over bigger/smaller numbers
- bool start = 0;
- bool big1 = 0;
- bool change1 = 0;
  bool flash = 0; //enable/disable flashing of oil temp when threshold exceeded
  bool flashActivate = 0;
+ int size = 0;
 
 //battery voltage
  #define batAnalogIn A0
@@ -108,6 +106,7 @@
  
  //millis to set delay between cycles of program
  unsigned long millis10 = 0;
+ unsigned long millis50 = 0;
  unsigned long millis200 = 0;
 
 static const unsigned char PROGMEM oil_lamp[] = {
@@ -394,11 +393,8 @@ void loop()
  }
  
  if ( millis() >= millis200 + 200 ) {
- 
+
   recvWithStartEndMarkers();
-  
-  batVolts();
-  
   //collect data from softSerial
   if (newData == true) {
       //nudat = 1;              //debugging
@@ -409,14 +405,19 @@ void loop()
       parseData();
       newData = false;
       }
-      
-  //blank bigger numbers for oil temp
-//to fix in future  
-   if (change1 == 1 && start == 1) {
-   tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
-   change1 = 0;
-   } 
- 
+
+  batVolts();
+
+  //battery voltage
+  tft.setTextSize(2);
+  tft.setTextColor(color2,black);
+  tft.setCursor(25,73);
+  tft.print(batAvg);
+    
+  millis200 = millis();
+  }
+
+ if (millis() >= millis50 + 50) {
   //Print oil temp gauge - horizontal bar
    if (int1 < 85) {
    flash = 0;
@@ -438,39 +439,58 @@ void loop()
    }
   
   //print data
-   tft.setTextSize(3);
+   //flashing oil temp >130c
    if (flash == 0) {
-    tft.setTextColor(color2);
-    }
+   tft.setTextColor(color2,black);
+     }
    if (flash == 1) {
     tft.setTextColor(black,black);
     tft.fillRect(68,7,35,22,black);
-   }
+    }
    if (flashActivate == 1) {
     flash = !flash;
+    }
+    
+  //Oil temp
+   tft.setTextSize(3);
+   if (int1 < 10) {
+    if (size != 1) {
+     tft.fillRect(68,0,12,28,black); //(x,y,w,h,color)
+     tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+    }
+    size = 1;
    }
-   Serial.println(flash);
-   if (big1 == 0) {
-   tft.setCursor(68,5); 
+   if (int1 >= 10 && int1 < 100) {
+    if (size != 2) {
+     tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+    }
+    size = 2;
+   }
+   if (int1 >= 100) {
+    size = 3;
+   }
+
+  if (size == 1 ) { 
+   tft.setCursor(86,5);
    tft.print(int1);
    }
-   else { 
+  if (size == 2) {
+   tft.setCursor(68,5); 
+   tft.print(int1);
+  }
+  if (size == 3 ) { 
    tft.setCursor(50,5);
    tft.print(int1);
    }
 
+  //Water Temp
   tft.setTextSize(2);
-  tft.setTextColor(color2);  //int2
+  tft.setTextColor(color2,black);  //int2
   if (int2 != 0) {
    tft.setCursor(25,53);
    tft.print(int2);
    tft.print(" ");
-   tft.print(" ");
   }
-  
-  //battery voltage
-  tft.setCursor(25,73);
-  tft.print(batAvg);
       
 
   //as yet unassigned value for int3
@@ -478,7 +498,6 @@ void loop()
 //  tft.setCursor(100,100);
 //  tft.println(headlights);
     
-  
-  millis200 = millis();
-   } 
+  millis50 = millis();
+ } 
 }
