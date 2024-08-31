@@ -48,7 +48,7 @@ Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys
  uint16_t greenDark = 0x05ab;
  uint16_t blueDark = 0x3997;
  uint16_t color = white;
- uint16_t color2 = red;
+ uint16_t color2 = white;
 
 //Software Serial  https://forum.arduino.cc/t/serial-input-basics-updated/382007/3
  #define rxPin 11
@@ -217,8 +217,8 @@ void dimmer() {
    }
    //bitmaps                                      
    tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
-   tft.drawBitmap(60, 67, battSmall, 20, 20, color);
-   tft.drawBitmap(0, 67, coolant, 20, 20, color);
+   tft.drawBitmap(60, 69, battSmall, 20, 20, color);
+   tft.drawBitmap(0, 69, coolant, 20, 20, color);
    tft.drawBitmap(0, 30, gauge, 128, 15, color);
    tft.drawBitmap(10,95,logo,107,31,color);
    //degrees C
@@ -237,6 +237,7 @@ void dimmer() {
    tft.print(85);
    tft.setCursor(110,57);
    tft.print(170);
+   tft.fillRect(0,66,128,1,color);
 }
 
 //  _           _              _ _       
@@ -393,8 +394,8 @@ void setup()
   
   //bitmaps
    tft.drawBitmap(0, 0, oil_lamp, 47, 27, white);
-   tft.drawBitmap(60, 67, battSmall, 20, 20, white);
-   tft.drawBitmap(0, 67, coolant, 20, 20, white);
+   tft.drawBitmap(60, 69, battSmall, 20, 20, white);
+   tft.drawBitmap(0, 69, coolant, 20, 20, white);
    tft.drawBitmap(0, 30, gauge, 128, 15, white);
    tft.drawBitmap(10,95,logo,107,31,white);
    //degrees C
@@ -412,6 +413,7 @@ void setup()
    tft.print(85);
    tft.setCursor(110,57);
    tft.print(170);
+   tft.fillRect(0,66,128,1,white);
 
   millis10 = millis();
   millis200 = millis();
@@ -431,6 +433,9 @@ void loop()
  if ( millis() >= millis10 + 10) {
   headlights = digitalRead(headlightSignal); //check if can delete - if checked in 'if' statement below
   //Serial.println(headlights);
+  if (headlights != headlightStatus) {
+  dimmer();
+  }
   if (headlights == 1) {                     
     analogWrite(Lite,50);
     headlightStatus = 1;
@@ -439,9 +444,7 @@ void loop()
     analogWrite(Lite,255);
     headlightStatus = 0;
   }
-  if (headlights != headlightStatus) {
-    dimmer();
-  }
+
 
   millis10 = millis();
  }
@@ -459,7 +462,6 @@ void loop()
   char onesDigit = '0' + ((voltage / 100) % 10);
   char tensDigit =  '0' + ((voltage / 10) % 10);
   char hundredsDigit =  '0' + (voltage % 10);
-
   
   //collect data from softSerial
   if (newData == true) {
@@ -552,18 +554,18 @@ void loop()
    tft.setTextColor(color2,black);  
    if (int2 != 0) {
     if (int2 <100 ) {
-     tft.fillRect(46,72,12,14,black);
+     tft.fillRect(46,74,12,14,black);
     }
-   tft.setCursor(23,72);
+   tft.setCursor(23,74);
    tft.print(int2);
   }
   
  //battery voltage - int3
-  tft.setCursor(82,72);
+  tft.setCursor(82,74);
   tft.print(nonesdigit);
   tft.print(onesDigit);
   tft.setTextSize(1);
-  tft.setCursor(104,79);
+  tft.setCursor(104,81);
   tft.print(".");
   tft.print(tensDigit);
   tft.print(hundredsDigit);
