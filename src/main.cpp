@@ -556,13 +556,13 @@ void loop()
     }
     
    //battery voltage - int3
-    // tft.setCursor(82,74);
-    // tft.print(nonesdigit);
-    // tft.print(onesDigit);
+    tft.setCursor(82,74);
+    tft.print(nonesdigit);
+    tft.print(onesDigit);
     // tft.setTextSize(1);
-    // tft.setCursor(104,81);
-    // tft.print(".");
-    // tft.print(tensDigit);
+    tft.setCursor(104,81);
+    tft.print(".");
+    tft.print(tensDigit);
     // tft.print(hundredsDigit);
       
     
