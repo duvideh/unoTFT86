@@ -224,7 +224,7 @@ void dimmer() {
    }
    //bitmaps                                      
    tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
-   tft.drawBitmap(60, 69, battSmall, 20, 20, color);
+   tft.drawBitmap(70, 69, battSmall, 20, 20, color);
    tft.drawBitmap(0, 69, coolant, 20, 20, color);
    tft.drawBitmap(0, 30, gauge, 128, 15, color);
    tft.drawBitmap(10,95,logo,107,31,color);
@@ -556,11 +556,11 @@ void loop()
     }
     
    //battery voltage - int3
-    tft.setCursor(82,74);
+    tft.setCursor(93,74);
     tft.print(nonesdigit);
     tft.print(onesDigit);
-    // tft.setTextSize(1);
-    tft.setCursor(104,81);
+    tft.setTextSize(1);
+    tft.setCursor(115,81);
     tft.print(".");
     tft.print(tensDigit);
     // tft.print(hundredsDigit);
