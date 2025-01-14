@@ -61,9 +61,9 @@
  boolean newData = false;
 
 // variables to hold the parsed data
- int int1 = 0;
- int int2 = 0;
- int int3 = 0;
+ int oil = 0;
+ int coolant = 0;
+ int voltage = 0;
  int disp1 = 0;
  int disp2 = 0;
  int disp3 = 0;
@@ -152,7 +152,7 @@ static const unsigned char battSmall [] PROGMEM = {
   0xc0, 0x00, 0x30, 0xc0, 0x00, 0x30, 0xff, 0xff, 0xf0, 0xff, 0xff, 0xf0
   };
 
-static const unsigned char coolant [] PROGMEM = {
+static const unsigned char coolantIcon [] PROGMEM = {
   // 'Coolant small', 26x30px
   0x00, 0x60, 0x00, 0x00, 0x60, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 0x00, 0x00, 
   0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 
@@ -225,7 +225,7 @@ void dimmer() {
    //bitmaps                                      
    tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
    tft.drawBitmap(70, 69, battSmall, 20, 20, color);
-   tft.drawBitmap(0, 69, coolant, 20, 20, color);
+   tft.drawBitmap(0, 69, coolantIcon, 20, 20, color);
    tft.drawBitmap(0, 30, gauge, 128, 15, color);
    tft.drawBitmap(10,95,logo,107,31,color);
    //degrees C
@@ -319,15 +319,15 @@ void parseData() {      // split the data into its parts
     char * strtokIndx; // this is used by strtok() as an index
 
     strtokIndx = strtok(tempChars, ","); //NULL is after first delimiter, before first delimiter use tempChars
-    int1 = atoi(strtokIndx);     // atoi = conver string to integer
+    oil = atoi(strtokIndx);     // atoi = conver string to integer
 
     //2nd digit in serial sequence
     strtokIndx = strtok(NULL, ",");
-    int2 = atoi(strtokIndx);
+    coolant = atoi(strtokIndx);
 
     //3rd digit etc..
     strtokIndx = strtok(NULL, ",");
-    int3 = atoi(strtokIndx);
+    voltage = atoi(strtokIndx);
 }
 
 
@@ -389,29 +389,6 @@ void setup()
   
   dimmer();
 
-  // //bitmaps
-  //  tft.drawBitmap(0, 0, oil_lamp, 47, 27, white);
-  //  tft.drawBitmap(60, 69, battSmall, 20, 20, white);
-  //  tft.drawBitmap(0, 69, coolant, 20, 20, white);
-  //  tft.drawBitmap(0, 30, gauge, 128, 15, white);
-  //  tft.drawBitmap(10,95,logo,107,31,white);
-  //  //degrees C
-  //  tft.drawChar(102,7,0x09,white,black,2);
-  //  tft.setTextSize(2);
-  //  tft.setTextColor(white);   
-  //  tft.setCursor(112,13);
-  //  tft.print("C");
-  //  //oil temp gauge
-  //  tft.setTextColor(white);      
-  //  tft.setTextSize(1);
-  //  tft.setCursor(0,57);
-  //  tft.print(0);
-  //  tft.setCursor(58,57);
-  //  tft.print(85);
-  //  tft.setCursor(110,57);
-  //  tft.print(170);
-  //  tft.fillRect(0,66,128,1,white);
-
   millis10 = millis();
   millis200 = millis();
 }
@@ -471,33 +448,33 @@ void loop()
     }
         
    //Print oil temp gauge - horizontal bar
-    if (int1 < 85) {
+    if (oil < 85) {
       flash = 0;
       tft.fillRect(2,49,2,4,blueDim);
-      tft.drawRect(0,47,(int1*0.7529)+1,8,color);
-      tft.drawRect(1,48,(int1*0.7529)-1,6,color);
-      tft.fillRect(2,49,(int1*0.7529)-3,4,blueDim);
-      tft.fillRect((int1*0.7529)+1,47,(128-(int1*0.7529)),8,black);
+      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
+      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
+      tft.fillRect(2,49,(oil*0.7529)-3,4,blueDim);
+      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
     }
-    if (int1 >= 85 && int1 <=129) {
+    if (oil >= 85 && oil <=129) {
       flash = 0;
       tft.fillRect(2,49,2,4,greenDim);
-      tft.drawRect(0,47,(int1*0.7529)+1,8,color);
-      tft.drawRect(1,48,(int1*0.7529)-1,6,color);
-      tft.fillRect(2,49,(int1*0.7529)-3,4,greenDim);
-      tft.fillRect((int1*0.7529)+1,47,(128-(int1*0.7529)),8,black);
+      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
+      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
+      tft.fillRect(2,49,(oil*0.7529)-3,4,greenDim);
+      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
     }
-    if (int1 >= 130) {
+    if (oil >= 130) {
       flashActivate = 1;
       tft.fillRect(2,49,2,4,redDim);
-      tft.drawRect(0,47,(int1*0.7529)+1,8,color);
-      tft.drawRect(1,48,(int1*0.7529)-1,6,color);
-      tft.fillRect(2,49,(int1*0.7529)-3,4,redDim);
-      tft.fillRect((int1*0.7529)+1,47,(128-(int1*0.7529)),8,black);
+      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
+      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
+      tft.fillRect(2,49,(oil*0.7529)-3,4,redDim);
+      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
     } 
     
    //print data
-    //flashing oil temp
+    //flashing oil temp digits
     if (millis() >= millis50 + 50){
       if (flash == 0) {
       tft.setTextColor(color2,black);
@@ -512,50 +489,49 @@ void loop()
       millis50 = millis();
     }
 
-    //Oil temp - int1
+    //Oil temp
     tft.setTextSize(3);
-    if (int1 < 10) {
-      if (size != 1) {
-      tft.fillRect(68,0,12,28,black); //(x,y,w,h,color)
-      tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
-      }
+    if (oil < 10) {
+        if (size != 1) {
+        tft.fillRect(68,0,12,28,black); //(x,y,w,h,color)
+        tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+        }
       size = 1;
       }
-    if (int1 >= 10 && int1 < 100) {
+    if (oil >= 10 && oil < 100) {
       if (size != 2) {
-      tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
-      }
+        tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+        }
       size = 2;
       }
-    if (int1 >= 100) {
+    if (oil >= 100) {
       size = 3;
-    }
+      }
 
-    if (size == 1 ) { 
+    if (size == 1) { 
       tft.setCursor(86,5);
-      tft.print(int1);
-    }
-    if (size == 2) {
+      tft.print(oil);
+      }
+    else if (size == 2) {
       tft.setCursor(68,5); 
-      tft.print(int1);
-    }
-    if (size == 3 ) { 
+      tft.print(oil);
+      }
+    else { 
       tft.setCursor(50,5);
-      tft.print(int1);
-    }
+      tft.print(oil);
+      }
 
-   //coolant temp - int2
+   //coolant temp
     tft.setTextSize(2);
     tft.setTextColor(color2,black);  
-    if (int2 != 0) {
-      if (int2 <100 ) {
-        tft.fillRect(46,74,12,14,black);
+    if (coolant != 0 && coolant < 100) {
+      tft.fillRect(46,74,12,14,black);
       }
     tft.setCursor(23,74);
-    tft.print(int2);
-    }
-    
-   //battery voltage - int3
+    tft.print(coolant);
+    delay(1);   //debugging delay to hopefully prevent mis-printing of coolant chars
+
+   //battery voltage
     tft.setCursor(93,74);
     tft.print(nonesdigit);
     tft.print(onesDigit);
@@ -564,7 +540,6 @@ void loop()
     tft.print(".");
     tft.print(tensDigit);
     // tft.print(hundredsDigit);
-      
     
     millis200 = millis();
 
