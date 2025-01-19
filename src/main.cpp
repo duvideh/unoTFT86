@@ -13,13 +13,19 @@
 #include <Adafruit_ImageReader.h> // Image-reading functions
 #include <SoftwareSerial.h>
 #include <SPI.h>
+#include <FlickerFreePrint-master/FlickerFreePrint.h>
+#include <eightySixFont20.h>
+#include <eightySixFont15.h>
+#include <eightySixFont10.h>
+#include <bitmaps.h>
  
 // TFT (use tft.### functions i.e. tft.println() )
  #define SD_CS          13 // SD card select pin
  #define TFT_DC         8 // TFT display/command pin
  #define TFT_RST        9 // Or set to -1 and connect to Arduino RESET pin
  #define TFT_CS        10 // TFT select pin 
- 
+ #define SPI_BUSY (!(SPSR & (1 << SPIF)))     // non-zero if SPI transmitter bus  //https://forums.adafruit.com/viewtopic.php?t=198726
+
  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST); 
 
 //SD Card stuff 
@@ -29,6 +35,36 @@
  int32_t              width  = 0, // BMP image dimensions
                       height = 0;
  
+ //canvas
+   //oil temp digits
+      #define W  59
+      #define H  28
+   //coolant temp digits
+      #define W2 42
+      #define H2 20
+   //voltage digits
+      #define W3 45
+      #define H3 20
+    //coolant and voltage icons
+      #define W4 21
+      #define H4 20
+    //86 logo
+      #define W5 107
+      #define H5 31
+    //oil lamp
+      #define W6 47
+      #define H6 27
+    //gauge
+      #define W7 128
+      #define H7 15
+   GFXcanvas1 canvas(W, H);   //oil temp digits
+   GFXcanvas1 canvas2(W2, H2); //coolant tem pdigits
+   GFXcanvas1 canvas3(W3, H3); //voltage digits
+   GFXcanvas1 canvas4(W4, H4); //coolant and voltage icons
+   GFXcanvas1 canvas5(W5, H5); //86 logo
+   GFXcanvas1 canvas6(W6, H6); //oil lamp
+   GFXcanvas1 canvas7(W7, H7); //gauge
+
 //variables to hold cursor coordinates
  int x = 0;
  int y = 0;
@@ -61,8 +97,8 @@
  boolean newData = false;
 
 // variables to hold the parsed data
- int oil = 0;
- int coolant = 0;
+ int oilTemp = 0;
+ int coolantTemp = 0;
  int voltage = 0;
  int disp1 = 0;
  int disp2 = 0;
@@ -89,7 +125,7 @@
 //headlight dimming
  #define headlightSignal 31  //input from Nano
  #define Lite 12             //output to TFT backlight
- int headlights = 0;
+ int headlights = 0;        
  bool headlightStatus = 0;
  
 //VSC control 
@@ -100,97 +136,14 @@
 //int max_state = 0; // state of max button
 //int modeButton = 0; // counter for the number of mode button presses
  
- //debugging
- //bool nudat = 0;
- //int increase = 0;
- 
 //millis to set delay between cycles of program
  unsigned long millis10 = 0;
  unsigned long millis50 = 0;
  unsigned long millis200 = 0;
 
-static const unsigned char PROGMEM oil_lamp[] = {
-  // 'Oil Temp', 47x32px
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 
-  0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 0x80, 0x00, 0x00, 0x00, 0x00, 
-  0x3f, 0x80, 0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x38, 0x00, 0x38, 0x00, 0x00, 0x00, 
-  0x3e, 0x00, 0x3f, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x3f, 0x80, 0x00, 0x00, 0x3f, 0xf0, 0x38, 0x00, 
-  0x00, 0xf8, 0x7f, 0xf0, 0x38, 0x00, 0x0f, 0xfc, 0x79, 0xf0, 0x38, 0x00, 0x3f, 0xfe, 0x78, 0x3c, 
-  0x3f, 0x81, 0xff, 0x9c, 0xfc, 0x3e, 0x3f, 0x87, 0xff, 0x00, 0xff, 0xbe, 0x38, 0x1f, 0xfe, 0x00, 
-  0x3f, 0xfc, 0x38, 0x3f, 0x9e, 0x08, 0x0f, 0xf8, 0x38, 0x7c, 0x1c, 0x1c, 0x03, 0xf8, 0x7c, 0x70, 
-  0x38, 0x1c, 0x00, 0x78, 0xfe, 0x00, 0x70, 0x1c, 0x00, 0x38, 0xfe, 0x00, 0xe0, 0x1c, 0x00, 0x38, 
-  0x7c, 0x01, 0xe0, 0x3e, 0x00, 0x38, 0x38, 0x03, 0xc0, 0x3e, 0x00, 0x38, 0x00, 0x07, 0x80, 0x3e, 
-  0x00, 0x38, 0x00, 0x07, 0x00, 0x3e, 0x00, 0x3f, 0xff, 0xff, 0x00, 0x1c, 0x00, 0x3f, 0xff, 0xfe, 
-  0x00, 0x00, 0x00, 0x3f, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-  };
-
-static const unsigned char PROGMEM gauge[] = {
-  // 'gauge', 128x15px
-  0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 
-	0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0x80, 0x3f, 0x00, 0x7f, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0x80, 0x3f, 0x00, 0x7f, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0xff, 0xff, 0xff, 0xff, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0xff, 0xff, 0xff, 0xff, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0x00, 0x1e, 0x00, 0x3f, 
-	0xfc, 0x00, 0x78, 0x01, 0xe0, 0x03, 0xc0, 0x07, 0xe0, 0x03, 0xc0, 0x0f, 0x00, 0x1e, 0x00, 0x3f, 
-	0xfc, 0x00, 0x30, 0x00, 0xc0, 0x01, 0x80, 0x07, 0xe0, 0x01, 0x80, 0x06, 0x00, 0x0c, 0x00, 0x3f, 
-	0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 
-	0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 
-	0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 
-	0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c
-  };
-
-static const unsigned char battSmall [] PROGMEM = {
-  //'battSmall', 20x20
-  0x30, 0x00, 0x00, 0x30, 0x00, 0x00, 0xfc, 0x03, 0xf0, 0xfc, 0x03, 0xf0, 0x30, 0x00, 0x00, 0x30, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0xc0, 0x30, 0x00, 0xc0, 0xff, 0xff, 
-  0xf0, 0xff, 0xff, 0xf0, 0xc0, 0x00, 0x30, 0xc0, 0x00, 0x30, 0xc0, 0x00, 0x30, 0xc0, 0x00, 0x30, 
-  0xc0, 0x00, 0x30, 0xc0, 0x00, 0x30, 0xff, 0xff, 0xf0, 0xff, 0xff, 0xf0
-  };
-
-static const unsigned char coolantIcon [] PROGMEM = {
-  // 'Coolant small', 26x30px
-  0x00, 0x60, 0x00, 0x00, 0x60, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 0x00, 0x00, 
-  0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x60, 
-  0x00, 0x78, 0x61, 0xe0, 0xfc, 0xf3, 0xf0, 0xce, 0xf7, 0x30, 0x00, 0xf0, 0x00, 0x7c, 0x63, 0xe0, 
-  0xfe, 0x07, 0xf0, 0xc7, 0x0e, 0x30, 0x03, 0xfc, 0x00, 0x01, 0xf8, 0x00
-  };
-
-static const unsigned char logo [] PROGMEM = {
-  //86 logo
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x03, 0xff, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x07, 0x80, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 
-	0x7f, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xdb, 0xff, 0xe0, 0x00, 0x00, 0x38, 0x1f, 0x83, 
-	0x80, 0x00, 0x00, 0xff, 0xfb, 0x60, 0xdb, 0xff, 0xe0, 0x00, 0x00, 0x70, 0x31, 0x81, 0xc0, 0x00, 
-	0x00, 0xff, 0xfb, 0x60, 0xdb, 0xff, 0xe0, 0x00, 0x00, 0x60, 0x33, 0x00, 0xc0, 0x00, 0x00, 0xff, 
-	0xfb, 0x60, 0xdb, 0xff, 0xf8, 0x00, 0x00, 0xe0, 0x62, 0x00, 0x60, 0x00, 0x00, 0xff, 0xfb, 0x60, 
-	0xdb, 0xff, 0xf8, 0x00, 0x01, 0xc0, 0x46, 0x00, 0x70, 0x00, 0x03, 0xff, 0xfb, 0x60, 0xdb, 0xff, 
-	0xd8, 0x00, 0x01, 0x80, 0xfc, 0x7f, 0x30, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xff, 0xd8, 0x00, 
-	0x01, 0x80, 0x78, 0x3f, 0x30, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xff, 0xd8, 0x00, 0x03, 0x80, 
-	0x00, 0x23, 0x38, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xc3, 0xff, 0xff, 0xff, 0x00, 0x00, 0x63, 
-	0xff, 0xff, 0xff, 0xf8, 0x7b, 0x60, 0xdb, 0x81, 0xbf, 0xff, 0xff, 0x07, 0xf0, 0x43, 0xff, 0xff, 
-	0xff, 0xb0, 0x3b, 0x60, 0xdb, 0x81, 0xbf, 0xff, 0xff, 0x06, 0x20, 0xc0, 0x1f, 0xff, 0xff, 0xb0, 
-	0x3b, 0x60, 0xdb, 0x81, 0xbf, 0xff, 0xff, 0x06, 0x60, 0xff, 0xff, 0xff, 0xff, 0xb0, 0x3b, 0x60, 
-	0xdb, 0x81, 0xbf, 0xff, 0xff, 0x0c, 0x40, 0x00, 0x3f, 0xff, 0xff, 0xb0, 0x3b, 0x60, 0xdb, 0xc3, 
-	0xff, 0xff, 0xff, 0x08, 0xc0, 0x00, 0x3f, 0xff, 0xff, 0xf8, 0x7b, 0x60, 0xdb, 0xff, 0xd8, 0x00, 
-	0x03, 0x98, 0x80, 0x00, 0x38, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xff, 0xd8, 0x00, 0x01, 0x9f, 
-	0x87, 0xe0, 0x30, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xff, 0xd8, 0x00, 0x01, 0x9f, 0x06, 0x60, 
-	0x30, 0x00, 0x03, 0x7f, 0xfb, 0x60, 0xdb, 0xff, 0xf8, 0x00, 0x01, 0xc0, 0x0c, 0x40, 0x70, 0x00, 
-	0x03, 0xff, 0xfb, 0x60, 0xdb, 0xff, 0xf8, 0x00, 0x00, 0xe0, 0x08, 0xc0, 0x60, 0x00, 0x03, 0xff, 
-	0xfb, 0x60, 0xdb, 0xff, 0xe0, 0x00, 0x00, 0xe0, 0x18, 0x80, 0xe0, 0x00, 0x00, 0xff, 0xfb, 0x60, 
-	0xdb, 0xff, 0xe0, 0x00, 0x00, 0x70, 0x11, 0x81, 0xc0, 0x00, 0x00, 0xff, 0xfb, 0x60, 0xdb, 0xff, 
-	0xe0, 0x00, 0x00, 0x38, 0x3f, 0x03, 0x80, 0x00, 0x00, 0xff, 0xfb, 0x60, 0xdb, 0xff, 0xe0, 0x00, 
-	0x00, 0x1e, 0x00, 0x1f, 0x00, 0x00, 0x00, 0xff, 0xfb, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 
-	0x80, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xff, 0xf8, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xe0, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00
-  };
+//flickerFreePrint displays
+  FlickerFreePrint<Adafruit_ST7735> Data1(&tft, white, black);
+  FlickerFreePrint<Adafruit_ST7735> Data2(&tft, redDim, black);
 
 //  __      ______ _____ _____
 //  \ \    / / __ \_   _|  __ \ "/"
@@ -201,12 +154,57 @@ static const unsigned char logo [] PROGMEM = {
 
 //============
 
+//   __          _   _____                     ____  _ _                         
+//  / _|        | | |  __ \                   |  _ \(_) |                        
+// | |_ __ _ ___| |_| |  | |_ __ __ ___      _| |_) |_| |_ _ __ ___   __ _ _ __  
+// |  _/ _` / __| __| |  | | '__/ _` \ \ /\ / /  _ <| | __| '_ ` _ \ / _` | '_ \ 
+// | || (_| \__ \ |_| |__| | | | (_| |\ V  V /| |_) | | |_| | | | | | (_| | |_) |
+// |_| \__,_|___/\__|_____/|_|  \__,_| \_/\_/ |____/|_|\__|_| |_| |_|\__,_| .__/ 
+//                                                                         |_|    
+//                                                                             
+void fastDrawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color, uint16_t bg) //https://forums.adafruit.com/viewtopic.php?t=198726
+{
+  //x += 40;                                   // mysterious X offset
+  //y += 53;                                   // mysterious Y offset
+  while SPI_BUSY;  digitalWrite(TFT_CS, 0);  // indicate "transfer"
+  while SPI_BUSY;  digitalWrite(TFT_DC, 0);  // indicate "command"
+  while SPI_BUSY;  SPDR = 0x2A;              // send column span command
+  while SPI_BUSY;  digitalWrite(TFT_DC, 1);  // indicate "data"
+  while SPI_BUSY;  SPDR = (x)     >> 8;      // send Xmin
+  while SPI_BUSY;  SPDR = (x)     >> 0;
+  while SPI_BUSY;  SPDR = (x+w-1) >> 8;      // send Xmax
+  while SPI_BUSY;  SPDR = (x+w-1) >> 0;
+  while SPI_BUSY;  digitalWrite(TFT_DC, 0);  // indicate "command"
+  while SPI_BUSY;  SPDR = 0x2B;              // send row span command
+  while SPI_BUSY;  digitalWrite(TFT_DC, 1);  // indicate "data"
+  while SPI_BUSY;  SPDR = (y)     >> 8;      // send Ymin
+  while SPI_BUSY;  SPDR = (y)     >> 0;
+  while SPI_BUSY;  SPDR = (y+h-1) >> 8;      // send Ymax
+  while SPI_BUSY;  SPDR = (y+h-1) >> 0;
+  while SPI_BUSY;  digitalWrite(TFT_DC, 0);  // indicate "command"
+  while SPI_BUSY;  SPDR = 0x2C;              // send write command
+  while SPI_BUSY;  digitalWrite(TFT_DC, 1);  // indicate "data"
+
+  int16_t byteWidth = (w + 7) >> 3;          // bitmap width in bytes
+  int8_t bits8 = 0;
+  for (int16_t j = 0; j < h; j++)
+    for (int16_t i = 0; i < w; i++)
+    {
+      bits8 = i & 7 ? bits8 << 1 : bitmap[j * byteWidth + (i >> 3)];  // fetch next pixel
+      uint16_t c = bits8 < 0 ? color : bg;   // select color
+      while SPI_BUSY;  SPDR = c >> 8;        // send color
+      while SPI_BUSY;  SPDR = c >> 0;
+    }
+  digitalWrite(TFT_CS, 1);                   // indicate "idle"
+}
+
+
 //      _ _                               
 //   __| (_)_ __ ___  _ __ ___   ___ _ __ 
 //  / _` | | '_ ` _ \| '_ ` _ \ / _ \ '__|
 // | (_| | | | | | | | | | | | |  __/ |   
 //  \__,_|_|_| |_| |_|_| |_| |_|\___|_|   
-
+//
 void dimmer() {  
   if (headlights == 1) {
     color = orange;
@@ -222,29 +220,40 @@ void dimmer() {
     blueDim = cyan;
     redDim = lightRed;
    }
-   //bitmaps                                      
-   tft.drawBitmap(0, 0, oil_lamp, 47, 27, color);
-   tft.drawBitmap(70, 69, battSmall, 20, 20, color);
-   tft.drawBitmap(0, 69, coolantIcon, 20, 20, color);
-   tft.drawBitmap(0, 30, gauge, 128, 15, color);
-   tft.drawBitmap(10,95,logo,107,31,color);
-   //degrees C
-   tft.drawChar(102,7,0x09,color2,black,2);
-   tft.setTextSize(2);
-   tft.setTextColor(color2);   
-   tft.setCursor(112,13);
-   tft.print("C");
-   //oil temp gauge
-   tft.setTextColor(color);      
-   tft.setTextSize(1);
-   tft.setCursor(21,39);
-   tft.setCursor(0,57);
-   tft.print(0);
-   tft.setCursor(58,57);
-   tft.print(85);
-   tft.setCursor(110,57);
-   tft.print(170);
-   tft.fillRect(0,66,128,1,color);
+  //bitmaps
+  //fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
+    canvas4.fillScreen(black);
+    canvas5.fillScreen(black);
+    canvas6.fillScreen(black);
+    canvas7.fillScreen(black);
+    canvas4.drawBitmap(0, 0, coolant, 20, 20, color2);
+    canvas5.drawBitmap(0, 0, logo, 107, 31, color2);
+    canvas6.drawBitmap(0, 0, oil_lamp, 47, 27, color2);
+    canvas7.drawBitmap(0, 0, gauge, 128, 15, color2);
+    fastDrawBitmap(2, 32, canvas7.getBuffer(), 128, 15, color, black);
+    fastDrawBitmap(12, 99, canvas5.getBuffer(), 107, 31, color, black);
+    fastDrawBitmap(2, 3, canvas6.getBuffer(), 47, 27, color, black);
+    fastDrawBitmap(2, 73, canvas4.getBuffer(), 20, 20, color, black);
+    canvas4.fillScreen(black);
+    canvas4.drawBitmap(0, 0, battSmall, 20, 20, color2);
+    fastDrawBitmap(65, 73, canvas4.getBuffer(), 20, 20, color, black);
+    //tft.drawRGBBitmap(10, 95,epd_bitmap_, 107, 32);  //86_color
+  //oil temp gauge horizontal bar digits
+    tft.setTextColor(color);
+    tft.setFont(&eightySixFont10);      
+    tft.setTextSize(1);
+    tft.setCursor(0,65);
+    tft.print(0);
+    tft.setCursor(53,65);
+    tft.print(85);
+    tft.setCursor(99,65);
+    tft.print(170);
+    tft.drawFastHLine(0,66,128,color);
+  // deg. C
+    tft.setTextColor(color2);  
+    tft.setFont(&eightySixFont20);
+    tft.setCursor(108,28);
+    tft.print("C");
 }
 
 //  _           _              _ _       
@@ -257,9 +266,9 @@ void batVolts (void)
 {
   batSensor = analogRead(batAnalogIn);
   batVoltage = (batSensor * ((r1+r2)/r2) ) * (aref/1024);
-  //ADC reads 0-5v in 0-1023
-  //Therefore, equation is 5/1023 for measured voltage
-  //Multiply that (0.0048828125) by 3.672619048 for battery voltage
+    //ADC reads 0-5v in 0-1023
+    //Therefore, equation is 5/1023 for measured voltage
+    //Multiply that (0.0048828125) by 3.672619048 for battery voltage
   batAvg = (batVoltage + batLast) / 2;
   batLast = batAvg;
 }
@@ -314,16 +323,16 @@ void recvWithStartEndMarkers() {
 
 //============
 
-void parseData() {      // split the data into its parts
+void parseData() {      // split the data to send into its parts
 
     char * strtokIndx; // this is used by strtok() as an index
 
     strtokIndx = strtok(tempChars, ","); //NULL is after first delimiter, before first delimiter use tempChars
-    oil = atoi(strtokIndx);     // atoi = conver string to integer
+    oilTemp = atoi(strtokIndx);     // atoi = conver string to integer
 
     //2nd digit in serial sequence
     strtokIndx = strtok(NULL, ",");
-    coolant = atoi(strtokIndx);
+    coolantTemp = atoi(strtokIndx);
 
     //3rd digit etc..
     strtokIndx = strtok(NULL, ",");
@@ -365,9 +374,9 @@ void setup()
   
   //SD Card stuff
   ImageReturnCode stat; // Status from image-reading functions
-  // The Adafruit_ImageReader constructor call (above, before setup())
-  // accepts an uninitialized SdFat or FatVolume object. This MUST
-  // BE INITIALIZED before using any of the image reader functions!
+    // The Adafruit_ImageReader constructor call (above, before setup())
+    // accepts an uninitialized SdFat or FatVolume object. This MUST
+    // BE INITIALIZED before using any of the image reader functions!
   Serial.print(F("Initializing filesystem..."));
   if(!SD.begin(SD_CS, SD_SCK_MHZ(10))) { // Breakouts require 10 MHz limit due to longer wires
     Serial.println(F("SD begin() failed"));
@@ -386,6 +395,17 @@ void setup()
   digitalWrite(VSC_out, LOW); //'release' VSC button
   
   tft.fillScreen(black);
+  canvas.fillScreen(black);
+  canvas.setTextWrap(false);
+  canvas.setFont(&eightySixFont20);
+  canvas.setTextSize(1);
+  canvas2.fillScreen(black);
+  canvas2.setTextWrap(false);
+  canvas2.setFont(&eightySixFont15);
+  canvas2.setTextSize(1);
+  canvas3.fillScreen(black);
+  canvas3.setTextWrap(false);
+  canvas3.setTextSize(1);
   
   dimmer();
 
@@ -427,13 +447,6 @@ void loop()
  if ( millis() >= millis200 + 200 ) {
     //voltage
     batVolts(); 
-    // Shift the decimal point right two digits and round off to an integer.
-    int voltage = (batAvg * 100.0) + 0.5;
-    // Extract each digit with the 'modulo' operator (%)
-    char nonesdigit = '0' + ((voltage / 1000)% 10);
-    char onesDigit = '0' + ((voltage / 100) % 10);
-    char tensDigit =  '0' + ((voltage / 10) % 10);
-    char hundredsDigit =  '0' + (voltage % 10);
     
     //collect data from softSerial
     recvWithStartEndMarkers();
@@ -448,100 +461,171 @@ void loop()
     }
         
    //Print oil temp gauge - horizontal bar
-    if (oil < 85) {
-      flash = 0;
-      tft.fillRect(2,49,2,4,blueDim);
-      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
-      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
-      tft.fillRect(2,49,(oil*0.7529)-3,4,blueDim);
-      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
+    if (oilTemp < 85) {
+      flashActivate = 0;
+      tft.fillRect(2,48,2,4,blueDim);
+      tft.drawRect(0,46,(oilTemp*0.7529)+1,8,color);
+      tft.drawRect(1,47,(oilTemp*0.7529)-1,6,color);
+      tft.fillRect(2,48,(oilTemp*0.7529)-3,4,blueDim);
+      tft.fillRect((oilTemp*0.7529)+1, 46, (128-(oilTemp*0.7529)), 8, black);
     }
-    if (oil >= 85 && oil <=129) {
-      flash = 0;
-      tft.fillRect(2,49,2,4,greenDim);
-      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
-      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
-      tft.fillRect(2,49,(oil*0.7529)-3,4,greenDim);
-      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
+    else if (oilTemp >= 85 && oilTemp <=129) {
+      flashActivate = 0;
+      tft.fillRect(2,48,2,4,greenDim);
+      tft.drawRect(0,46,(oilTemp*0.7529)+1,8,color);
+      tft.drawRect(1,47,(oilTemp*0.7529)-1,6,color);
+      tft.fillRect(2,48,(oilTemp*0.7529)-3,4,greenDim);
+      tft.fillRect((oilTemp*0.7529)+1, 46, (128-(oilTemp*0.7529)), 8, black);
     }
-    if (oil >= 130) {
+    else if (oilTemp >= 130) {
       flashActivate = 1;
-      tft.fillRect(2,49,2,4,redDim);
-      tft.drawRect(0,47,(oil*0.7529)+1,8,color);
-      tft.drawRect(1,48,(oil*0.7529)-1,6,color);
-      tft.fillRect(2,49,(oil*0.7529)-3,4,redDim);
-      tft.fillRect((oil*0.7529)+1,47,(128-(oil*0.7529)),8,black);
-    } 
-    
-   //print data
-    //flashing oil temp digits
-    if (millis() >= millis50 + 50){
-      if (flash == 0) {
-      tft.setTextColor(color2,black);
-      }
-      if (flash == 1) {
-      tft.setTextColor(black,black);
-      tft.fillRect(68,7,35,22,black);
-      }
-      if (flashActivate == 1) {
-      flash = !flash;
-      }
-      millis50 = millis();
+      tft.fillRect(2,48,2,4,redDim);
+      tft.drawRect(0,46,(oilTemp*0.7529)+1,8,color);
+      tft.drawRect(1,47,(oilTemp*0.7529)-1,6,color);
+      tft.fillRect(2,48,(oilTemp*0.7529)-3,4,redDim);
+      tft.fillRect((oilTemp*0.7529)+1, 46, (128-(oilTemp*0.7529)), 8, black);
     }
+
+    //warning flashing
+      if (millis() >= millis50 + 100) {
+        flash = !flash;
+        millis50 = millis();
 
     //Oil temp
-    tft.setTextSize(3);
-    if (oil < 10) {
-        if (size != 1) {
-        tft.fillRect(68,0,12,28,black); //(x,y,w,h,color)
-        tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+      canvas.setTextColor(color2,black);
+      static byte value = 0;
+      canvas.fillScreen(black); //erase canvas
+      //establish cursor position based on number of digits 1, 2 or 3 (i.e 9, 19, 119) - basically make text right-aligned instead of default left-aligned
+        if (oilTemp < 10) {
+          if (size != 1) {
+          }
+          size = 1;
         }
-      size = 1;
-      }
-    if (oil >= 10 && oil < 100) {
-      if (size != 2) {
-        tft.fillRect(50,0,12,28,black); //(x,y,w,h,color)
+        if (oilTemp >= 10 && oilTemp < 100) {
+          if (size != 2) {
+          }
+          size = 2;
         }
-      size = 2;
-      }
-    if (oil >= 100) {
-      size = 3;
-      }
+        if (oilTemp >= 100) {
+          size = 3;
+        }
+      //print text to screen
+        if (size == 1 ) { 
+          //canvas.drawBitmap(2, 0, oilTemp_lamp, 47, 27, color);
+          //numbers ending in 1, shift to the right
+          if ((oilTemp % 10) == 1) {
+            canvas.setCursor(46,28);//96,28);
+          }
+          else {
+            canvas.setCursor(39,28);//89,28);
+          }
+          canvas.print(oilTemp);
+          fastDrawBitmap(50, 2, canvas.getBuffer(), W, H, color2, black);
+        }
+        if (size == 2) {
+          //canvas.drawBitmap(2, 0, oilTemp_lamp, 47, 27, color);
+          if (oilTemp < 20) {            //compensate for reduced width of "1" digit
+            canvas.setCursor(26,28);
+          }
+          else {
+            canvas.setCursor(19,28);
+          }
+          if ((oilTemp % 10) == 1) {
+            canvas.setCursor(canvas.getCursorX()+7,28);
+          }
+          canvas.print(oilTemp);
+          fastDrawBitmap(50, 2, canvas.getBuffer(), W, H, color2, black);
+        }
+        if (size == 3 ) { 
+          //canvas.drawBitmap(2, 0, oilTemp_lamp, 47, 27, color);
+          if (oilTemp >=110 && oilTemp <=119) {
+            canvas.setCursor(13,28);
+          }
+          else {
+            canvas.setCursor(6,28);
+          }
+          if ((oilTemp % 10) == 1) {
+            canvas.setCursor(canvas.getCursorX()+7,28);
+          }
+          if (flashActivate == 1) {
+            if (flash == 1) {
+              canvas.fillRect(63,28,60,20,black);
+            }
+            else {
+              canvas.print(oilTemp);
+            }
+          }
+          else {
+            canvas.print(oilTemp);
+          }
+          fastDrawBitmap(50, 2, canvas.getBuffer(), W, H, color2, black);
+          }
 
-    if (size == 1) { 
-      tft.setCursor(86,5);
-      tft.print(oil);
+    //coolant temp
+      canvas2.fillScreen(black);
+      canvas2.setTextColor(color2);  //coolantTemp
+      if (coolantTemp <=9) {
+        canvas2.setCursor(2,19);
+        canvas2.print(coolantTemp);
       }
-    else if (size == 2) {
-      tft.setCursor(68,5); 
-      tft.print(oil);
+      if (coolantTemp >= 10 && coolantTemp <= 19) {     //compensate for width of "1" digit
+        canvas2.setCursor(0,19);
+        canvas2.print(coolantTemp);
       }
-    else { 
-      tft.setCursor(50,5);
-      tft.print(oil);
+      if (coolantTemp >= 20 && coolantTemp <=94) {
+        canvas2.setCursor(2,19);
+        canvas2.print(coolantTemp);
       }
-
-   //coolant temp
-    tft.setTextSize(2);
-    tft.setTextColor(color2,black);  
-    if (coolant != 0 && coolant < 100) {
-      tft.fillRect(46,74,12,14,black);
+      if (coolantTemp >= 95) {
+        //cursor
+          if (coolantTemp >= 100) {
+            canvas2.setCursor(0,19);
+          }
+          else {
+            canvas2.setCursor(2,19);
+          }
+        //flashing
+          if (flash == 1) {
+            canvas2.fillRect(20,0,60,20,black);
+          }
+          else {
+            canvas2.print(coolantTemp);
+        }
       }
-    tft.setCursor(23,74);
-    tft.print(coolant);
-    delay(1);   //debugging delay to hopefully prevent mis-printing of coolant chars
-
-   //battery voltage
-    tft.setCursor(93,74);
-    tft.print(nonesdigit);
-    tft.print(onesDigit);
-    tft.setTextSize(1);
-    tft.setCursor(115,81);
-    tft.print(".");
-    tft.print(tensDigit);
-    // tft.print(hundredsDigit);
+      fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
     
-    millis200 = millis();
-
+    //battery voltage
+      // Shift the decimal point right two digits and round off to an integer
+        int voltage = (batAvg * 100.0) + 0.5;
+      // Extract each digit with the 'modulo' operator (%)
+        char tensDigit = '0' + ((voltage / 1000) % 10);
+        char onesDigit = '0' + ((voltage / 100) % 10);
+        char tenthsDigit =  '0' + ((voltage / 10) % 10);
+        //char hundredsDigit =  '0' + (voltage % 10);
+      canvas3.fillScreen(black);
+      canvas3.setFont(&eightySixFont15);
+      canvas3.setTextColor(color2);
+      if (batAvg < 1.0) {
+        canvas3.setCursor(2,19);
+      }
+      else if (batAvg >= 1.0 && batAvg < 2.0) {
+        canvas3.setCursor(0,19);
+      }
+      else if(batAvg >= 2.0 && batAvg < 10.0) {
+        canvas3.setCursor(2,19);
+      }
+      else if (batAvg >= 10.0) {
+        canvas3.setCursor(0,19);
+        canvas3.print(tensDigit);
+      }
+      canvas3.print(onesDigit);
+      canvas3.setCursor((canvas3.getCursorX()), ((canvas3.getCursorY())+1));
+      canvas3.print(".");
+      canvas3.setCursor((canvas3.getCursorX()), ((canvas3.getCursorY())-1));
+      canvas3.setFont(&eightySixFont10);
+      canvas3.print(tenthsDigit);
+      fastDrawBitmap(86,74, canvas3.getBuffer(), W3, H3, color2, black);
+    
+  millis200 = millis();
   } 
 }
