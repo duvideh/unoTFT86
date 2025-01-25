@@ -117,6 +117,9 @@
  float batVoltage = 0;
  float batLast = 0;
  float batAvg = 0;
+ float batArray[] = {12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0};
+ int i = 0;
+ float sum = 120.0;
  //***calibrate here*** 
  float aref = 1.063; //change this to the actual Aref voltage of ---YOUR--- Arduino 
  float r1 = 98.5; //insert first resistor value
@@ -269,8 +272,18 @@ void batVolts (void)
     //ADC reads 0-5v in 0-1023
     //Therefore, equation is 5/1023 for measured voltage
     //Multiply that (0.0048828125) by 3.672619048 for battery voltage
-  batAvg = (batVoltage + batLast) / 2;
-  batLast = batAvg;
+  //batAvg = (batVoltage + batLast) / 2;
+  //batLast = batAvg;
+  batArray[i] = (batVoltage);
+  if (i < 9) {
+    i++;
+  }
+  else {
+    i = 0;
+  }
+  for (int a = 0 ; a < sizeof(batArray) ; a++)
+    batAvg += batArray [a] ;
+  batAvg = batAvg / 10;
 }
 
 //============
@@ -353,9 +366,10 @@ void setup()
   Serial.begin(9600);
   softSerial.begin(9600);
 
-  analogReference(INTERNAL1V1); // use ianalogReference(INTERNAL)nternal voltage reference
+  //voltage
+    analogReference(INTERNAL1V1); // use ianalogReference(INTERNAL)nternal voltage reference
                                 //***CAUTION*** do not connect >1v to any analogRead pin!!!
-  
+
   //headlights I/O
   pinMode(Lite,OUTPUT);
   digitalWrite(Lite,LOW);
@@ -445,9 +459,6 @@ void loop()
   }
  
  if ( millis() >= millis200 + 200 ) {
-    //voltage
-    batVolts(); 
-    
     //collect data from softSerial
     recvWithStartEndMarkers();
     if (newData == true) {
@@ -490,6 +501,7 @@ void loop()
       if (millis() >= millis50 + 100) {
         flash = !flash;
         millis50 = millis();
+      }
 
     //Oil temp
       canvas.setTextColor(color2,black);
@@ -595,6 +607,7 @@ void loop()
       fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
     
     //battery voltage
+      batVolts();
       // Shift the decimal point right two digits and round off to an integer
         int voltage = (batAvg * 100.0) + 0.5;
       // Extract each digit with the 'modulo' operator (%)
