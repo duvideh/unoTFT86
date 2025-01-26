@@ -99,6 +99,8 @@
 // variables to hold the parsed data
  int oilTemp = 0;
  int coolantTemp = 0;
+ int previousCoolantTemp = 0;
+ int coolantTemporary = 0;
  int voltage = 0;
  int disp1 = 0;
  int disp2 = 0;
@@ -117,7 +119,9 @@
  float batVoltage = 0;
  float batLast = 0;
  float batAvg = 0;
- float batArray[] = {12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0};
+ //array stuff
+ int arraySize = 10; //remember last digit of array is always array size minus one - 0 counts as first value
+ float batArray[10];
  int i = 0;
  float sum = 120.0;
  //***calibrate here*** 
@@ -281,9 +285,9 @@ void batVolts (void)
   else {
     i = 0;
   }
-  for (int a = 0 ; a < sizeof(batArray) ; a++)
-    batAvg += batArray [a] ;
-  batAvg = batAvg / 10;
+  for (int a = 0; a < arraySize -1; a++)
+    batAvg += batArray[a];
+    batAvg = batAvg / arraySize;
 }
 
 //============
@@ -345,7 +349,14 @@ void parseData() {      // split the data to send into its parts
 
     //2nd digit in serial sequence
     strtokIndx = strtok(NULL, ",");
-    coolantTemp = atoi(strtokIndx);
+    coolantTemporary = atoi(strtokIndx);
+    if (coolantTemporary < previousCoolantTemp - 5) {
+      coolantTemp = previousCoolantTemp;
+    }
+    else {
+      coolantTemp = coolantTemporary;
+    }
+    previousCoolantTemp = coolantTemp;
 
     //3rd digit etc..
     strtokIndx = strtok(NULL, ",");
@@ -369,14 +380,16 @@ void setup()
   //voltage
     analogReference(INTERNAL1V1); // use ianalogReference(INTERNAL)nternal voltage reference
                                 //***CAUTION*** do not connect >1v to any analogRead pin!!!
+    for (int c = 0; c < arraySize -1; c++)  //initialise batArray to have all values at 12.5 - for all intents and purposes 'baseline' battery voltage
+      batArray[c] = 12.5;                   
 
   //headlights I/O
-  pinMode(Lite,OUTPUT);
-  digitalWrite(Lite,LOW);
-  pinMode(headlightSignal,INPUT);
+    pinMode(Lite,OUTPUT);
+    digitalWrite(Lite,LOW);
+    pinMode(headlightSignal,INPUT);
 
   //VSC
-  pinMode(VSC_out, OUTPUT); // VSC output
+    pinMode(VSC_out, OUTPUT); // VSC output
 
   //establish pins 2 and 3 as interrupts, mode increase button
   //  pinMode(max_pin, INPUT); // max button
@@ -384,47 +397,48 @@ void setup()
   //  attachInterrupt(digitalPinToInterrupt(3), mode_counter_decrease, RISING);  // modeButton = 0
 
   // TFT
-  tft.initR(INITR_144GREENTAB); // Init ST7735R chip, green tab
-  
-  //SD Card stuff
-  ImageReturnCode stat; // Status from image-reading functions
-    // The Adafruit_ImageReader constructor call (above, before setup())
-    // accepts an uninitialized SdFat or FatVolume object. This MUST
-    // BE INITIALIZED before using any of the image reader functions!
-  Serial.print(F("Initializing filesystem..."));
-  if(!SD.begin(SD_CS, SD_SCK_MHZ(10))) { // Breakouts require 10 MHz limit due to longer wires
-    Serial.println(F("SD begin() failed"));
-    for(;;); // Fatal error, do not continue
-   }
-  Serial.println(F("OK!")); 
-  Serial.print(F("Loading 86x128.bmp to screen..."));
-  stat = reader.drawBMP("/86x128.bmp", tft, 0, 0);
-  reader.printStatus(stat);   // How'd we do?     
-    
-  analogWrite(Lite,255); //turn on backlight - after 86x128.bmp first displayed so white screen doesn't appear
+    tft.initR(INITR_144GREENTAB); // Init ST7735R chip, green tab
+    //SD Card stuff
+      ImageReturnCode stat; // Status from image-reading functions
+        // The Adafruit_ImageReader constructor call (above, before setup())
+        // accepts an uninitialized SdFat or FatVolume object. This MUST
+        // BE INITIALIZED before using any of the image reader functions!
+      Serial.print(F("Initializing filesystem..."));
+      if(!SD.begin(SD_CS, SD_SCK_MHZ(10))) { // Breakouts require 10 MHz limit due to longer wires
+        Serial.println(F("SD begin() failed"));
+        for(;;); // Fatal error, do not continue
+      }
+      Serial.println(F("OK!")); 
+      Serial.print(F("Loading 86x128.bmp to screen..."));
+      stat = reader.drawBMP("/86x128.bmp", tft, 0, 0);
+      reader.printStatus(stat);   // How'd we do?     
+      analogWrite(Lite,255); //turn on backlight - after 86x128.bmp first displayed so white screen doesn't appear
   
   delay(1000);
   digitalWrite(VSC_out, HIGH); //'hold down' VSC button
   delay(3200);
   digitalWrite(VSC_out, LOW); //'release' VSC button
   
-  tft.fillScreen(black);
-  canvas.fillScreen(black);
-  canvas.setTextWrap(false);
-  canvas.setFont(&eightySixFont20);
-  canvas.setTextSize(1);
-  canvas2.fillScreen(black);
-  canvas2.setTextWrap(false);
-  canvas2.setFont(&eightySixFont15);
-  canvas2.setTextSize(1);
-  canvas3.fillScreen(black);
-  canvas3.setTextWrap(false);
-  canvas3.setTextSize(1);
+  //initial writing of characters, fonts to canvases
+    tft.fillScreen(black);
+    canvas.fillScreen(black);
+    canvas.setTextWrap(false);
+    canvas.setFont(&eightySixFont20);
+    canvas.setTextSize(1);
+    canvas2.fillScreen(black);
+    canvas2.setTextWrap(false);
+    canvas2.setFont(&eightySixFont15);
+    canvas2.setTextSize(1);
+    canvas3.fillScreen(black);
+    canvas3.setTextWrap(false);
+    canvas3.setTextSize(1);
   
-  dimmer();
+  //check if headlights on, set dimming accordingly
+    dimmer();
 
-  millis10 = millis();
-  millis200 = millis();
+  //establishment of delay-less timing protocols
+    millis10 = millis();
+    millis200 = millis();
 }
 
 //   _      ____   ____  _____
