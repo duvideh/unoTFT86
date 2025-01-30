@@ -101,6 +101,7 @@
  int coolantTemp = 0;
  int previousCoolantTemp = 0;
  int coolantTemporary = 0;
+ bool coolantStart;      //initial value to set previousCoolantTemp to first reading
  int voltage = 0;
  int disp1 = 0;
  int disp2 = 0;
@@ -279,15 +280,14 @@ void batVolts (void)
   //batAvg = (batVoltage + batLast) / 2;
   //batLast = batAvg;
   batArray[i] = (batVoltage);
-  if (i < 9) {
-    i++;
-  }
-  else {
+  i++;
+  if (i < arraySize -1) {
     i = 0;
   }
-  for (int a = 0; a < arraySize -1; a++)
+  for (int a = 0; a < arraySize -1; a++) {
     batAvg += batArray[a];
-    batAvg = batAvg / arraySize;
+  }
+  batAvg = batAvg / arraySize;
 }
 
 //============
@@ -349,14 +349,7 @@ void parseData() {      // split the data to send into its parts
 
     //2nd digit in serial sequence
     strtokIndx = strtok(NULL, ",");
-    coolantTemporary = atoi(strtokIndx);
-    if (coolantTemporary < previousCoolantTemp - 5) {
-      coolantTemp = previousCoolantTemp;
-    }
-    else {
-      coolantTemp = coolantTemporary;
-    }
-    previousCoolantTemp = coolantTemp;
+    coolantTemp = atoi(strtokIndx);
 
     //3rd digit etc..
     strtokIndx = strtok(NULL, ",");
@@ -588,6 +581,23 @@ void loop()
           }
 
     //coolant temp
+      // if (coolantStart == 1) {
+      //   previousCoolantTemp = coolantTemp;
+      //   coolantStart = 0;
+      // }
+      // coolantTemporary = coolantTemp;
+      // if (previousCoolantTemp > 1 && coolantTemporary != 0) {
+      //   coolantTemporary = coolantTemp;
+      //   }
+      // else {
+      //   coolantTemp = previousCoolantTemp;
+      //   }
+    //   coolantTemp = previousCoolantTemp;
+    // }
+    // else {
+    //   coolantTemp = coolantTemporary;
+    // }
+    // previousCoolantTemp = coolantTemp;
       canvas2.fillScreen(black);
       canvas2.setTextColor(color2);  //coolantTemp
       if (coolantTemp <=9) {
@@ -619,6 +629,7 @@ void loop()
         }
       }
       fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
+      previousCoolantTemp = coolantTemp;
     
     //battery voltage
       batVolts();
