@@ -279,13 +279,11 @@ void batVolts (void)
   //batAvg = (batVoltage + batLast) / 2;
   //batLast = batAvg;
   batArray[i] = (batVoltage);
-  if (i < 9) {
-    i++;
-  }
-  else {
+  i++;
+if (i > arraySize - 1) {
     i = 0;
   }
-  for (int a = 0; a < arraySize -1; a++)
+  for (int a = 0; a < arraySize-1; a++)
     batAvg += batArray[a];
     batAvg = batAvg / arraySize;
 }
@@ -349,7 +347,7 @@ void parseData() {      // split the data to send into its parts
 
     //2nd digit in serial sequence
     strtokIndx = strtok(NULL, ",");
-    coolantTemporary = atoi(strtokIndx);
+    coolantTemp = atoi(strtokIndx);
     if (coolantTemporary < previousCoolantTemp - 5) {
       coolantTemp = previousCoolantTemp;
     }
