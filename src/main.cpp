@@ -121,8 +121,8 @@
  float batLast = 0;
  float batAvg = 0;
  //array stuff
- int arraySize = 10; //remember last digit of array is always array size minus one - 0 counts as first value
- float batArray[10];
+ const int arraySize = 20; //remember last digit of array is always array size minus one - 0 counts as first value
+ float batArray[arraySize];
  int i = 0;
  float sum = 120.0;
  //***calibrate here*** 
@@ -284,7 +284,7 @@ void batVolts (void)
   if (i > arraySize - 1) {
     i = 0;
   }
-  for (int a = 0; a < arraySize-1; a++) {
+  for (int a = 0; a < arraySize - 1; a++) {
     batAvg += batArray[a];
   }
   batAvg = batAvg / arraySize;
@@ -461,6 +461,7 @@ void loop()
       headlightStatus = 0;
     }
 
+    batVolts();
 
     millis10 = millis();
   }
@@ -581,23 +582,13 @@ void loop()
           }
 
     //coolant temp
-      // if (coolantStart == 1) {
-      //   previousCoolantTemp = coolantTemp;
-      //   coolantStart = 0;
-      // }
-      // coolantTemporary = coolantTemp;
-      // if (previousCoolantTemp > 1 && coolantTemporary != 0) {
-      //   coolantTemporary = coolantTemp;
-      //   }
-      // else {
-      //   coolantTemp = previousCoolantTemp;
-      //   }
-    //   coolantTemp = previousCoolantTemp;
-    // }
-    // else {
-    //   coolantTemp = coolantTemporary;
-    // }
-    // previousCoolantTemp = coolantTemp;
+      if (coolantStart == 1) {
+        previousCoolantTemp = coolantTemp;
+        coolantStart = 0;
+      }
+      if (previousCoolantTemp - coolantTemp > 3) {
+        coolantTemp = previousCoolantTemp;
+      }
       canvas2.fillScreen(black);
       canvas2.setTextColor(color2);  //coolantTemp
       if (coolantTemp <=9) {
@@ -626,13 +617,12 @@ void loop()
           }
           else {
             canvas2.print(coolantTemp);
-        }
+          } 
       }
       fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
       previousCoolantTemp = coolantTemp;
     
     //battery voltage
-      batVolts();
       // Shift the decimal point right two digits and round off to an integer
         int voltage = (batAvg * 100.0) + 0.5;
       // Extract each digit with the 'modulo' operator (%)
