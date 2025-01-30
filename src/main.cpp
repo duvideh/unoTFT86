@@ -282,9 +282,12 @@ void batVolts (void)
   batArray[i] = (batVoltage);
   i++;
   if (i < arraySize -1) {
+  i++;
+if (i > arraySize - 1) {
     i = 0;
   }
   for (int a = 0; a < arraySize -1; a++) {
+  for (int a = 0; a < arraySize-1; a++)
     batAvg += batArray[a];
   }
   batAvg = batAvg / arraySize;
