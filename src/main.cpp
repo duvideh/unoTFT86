@@ -98,7 +98,7 @@
 
 // variables to hold the parsed data
  int oilTemp = 0;
- int coolantTemp = 0;
+ int coolantTemp = 1;
  int previousCoolantTemp = 0;
  int coolantTemporary = 0;
  bool coolantStart;      //initial value to set previousCoolantTemp to first reading
@@ -586,7 +586,7 @@ void loop()
         previousCoolantTemp = coolantTemp;
         coolantStart = 0;
       }
-      if (previousCoolantTemp - coolantTemp > 3) {
+      if (coolantTemp = 0) {
         coolantTemp = previousCoolantTemp;
       }
       canvas2.fillScreen(black);
