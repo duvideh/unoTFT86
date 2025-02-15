@@ -101,7 +101,7 @@
  int coolantTemp = 1;
  int previousCoolantTemp = 0;
  int coolantTemporary = 0;
- bool coolantStart;      //initial value to set previousCoolantTemp to first reading
+ bool coolantStart = 1;      //initial value to set previousCoolantTemp to first reading
  int voltage = 0;
  int disp1 = 0;
  int disp2 = 0;
@@ -586,9 +586,10 @@ void loop()
         previousCoolantTemp = coolantTemp;
         coolantStart = 0;
       }
-      if (coolantTemp = 0) {
-        coolantTemp = previousCoolantTemp;
-      }
+      // if (coolantTemp = 0) {                // doesnt't work idk
+      //   coolantTemp = previousCoolantTemp;
+      // }
+      if (coolantTemp + previousCoolantTemp != previousCoolantTemp) {
       canvas2.fillScreen(black);
       canvas2.setTextColor(color2);  //coolantTemp
       if (coolantTemp <=9) {
@@ -621,6 +622,7 @@ void loop()
       }
       fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
       previousCoolantTemp = coolantTemp;
+      }
     
     //battery voltage
       // Shift the decimal point right two digits and round off to an integer
