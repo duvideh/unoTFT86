@@ -118,7 +118,6 @@
  #define batAnalogIn A0
  float batSensor = 0;
  float batVoltage = 0;
- float batLast = 0;
  float batAvg = 0;
  //array stuff
  const int arraySize = 20; //remember last digit of array is always array size minus one - 0 counts as first value
@@ -351,9 +350,9 @@ void parseData() {      // split the data to send into its parts
     strtokIndx = strtok(NULL, ",");
     coolantTemp = atoi(strtokIndx);
 
-    //3rd digit etc..
-    strtokIndx = strtok(NULL, ",");
-    voltage = atoi(strtokIndx);
+    // //3rd digit etc..
+    // strtokIndx = strtok(NULL, ",");
+    // voltage = atoi(strtokIndx);
 }
 
 
@@ -632,6 +631,7 @@ void loop()
         char onesDigit = '0' + ((voltage / 100) % 10);
         char tenthsDigit =  '0' + ((voltage / 10) % 10);
         //char hundredsDigit =  '0' + (voltage % 10);
+      //write to canvas
       canvas3.fillScreen(black);
       canvas3.setFont(&eightySixFont15);
       canvas3.setTextColor(color2);
