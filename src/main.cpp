@@ -18,6 +18,7 @@
 #include <eightySixFont15.h>
 #include <eightySixFont10.h>
 #include <bitmaps.h>
+#include <INA226.h>
  
 // TFT (use tft.### functions i.e. tft.println() )
  #define SD_CS          13 // SD card select pin
@@ -114,20 +115,9 @@
  bool flashActivate = 0;
  int size = 0;
 
-//battery voltage
- #define batAnalogIn A0
- float batSensor = 0;
- float batVoltage = 0;
- float batAvg = 0;
- //array stuff
- const int arraySize = 20; //remember last digit of array is always array size minus one - 0 counts as first value
- float batArray[arraySize];
- int i = 0;
- float sum = 120.0;
- //***calibrate here*** 
- float aref = 1.063; //change this to the actual Aref voltage of ---YOUR--- Arduino 
- float r1 = 98.5; //insert first resistor value
- float r2 = 6.73; //insert second resistor value
+//INA226 voltage sensor
+ float voltRead = 0.0;
+ INA226 INA(0x40);  //I2C device identifier
  
 //headlight dimming
  #define headlightSignal 31  //input from Nano
@@ -263,96 +253,74 @@ void dimmer() {
     tft.print("C");
 }
 
-//  _           _              _ _       
-// | |__   __ _| |_/\   /\___ | | |_ ___ 
-// | '_ \ / _` | __\ \ / / _ \| | __/ __|
-// | |_) | (_| | |_ \ V / (_) | | |_\__ \ "/"
-// |_.__/ \__,_|\__| \_/ \___/|_|\__|___/
-                                      
-void batVolts (void)
-{
-  batSensor = analogRead(batAnalogIn);
-  batVoltage = (batSensor * ((r1+r2)/r2) ) * (aref/1024);
-    //ADC reads 0-5v in 0-1023
-    //Therefore, equation is 5/1023 for measured voltage
-    //Multiply that (0.0048828125) by 3.672619048 for battery voltage
-  //batAvg = (batVoltage + batLast) / 2;
-  //batLast = batAvg;
-  batArray[i] = (batVoltage);
-  i++;
-  if (i > arraySize - 1) {
-    i = 0;
-  }
-  for (int a = 0; a < arraySize - 1; a++) {
-    batAvg += batArray[a];
-  }
-  batAvg = batAvg / arraySize;
-}
-
-//============
-
-//void mode_counter_increase (void)
-//{
-//modeButton = 1;
-//}
-
-//============
-
-//void mode_counter_decrease (void)
-//{
-//modeButton = 0;
-//}
-
-//============
-
+//                       __    __ _ _   _     __ _             _     __          _                   _                 
+//  _ __ ___  _____   __/ / /\ \ (_) |_| |__ / _\ |_ __ _ _ __| |_  /__\ __   __| | /\/\   __ _ _ __| | _____ _ __ ___ 
+// | '__/ _ \/ __\ \ / /\ \/  \/ / | __| '_ \\ \| __/ _` | '__| __|/_\| '_ \ / _` |/    \ / _` | '__| |/ / _ \ '__/ __|
+// | | |  __/ (__ \ V /  \  /\  /| | |_| | | |\ \ || (_| | |  | |_//__| | | | (_| / /\/\ \ (_| | |  |   <  __/ |  \__ \ "/"
+// |_|  \___|\___| \_/    \/  \/ |_|\__|_| |_\__/\__\__,_|_|   \__\__/|_| |_|\__,_\/    \/\__,_|_|  |_|\_\___|_|  |___/
+                                                                                                                    
 void recvWithStartEndMarkers() {
-    static boolean recvInProgress = false;
-    static byte ndx = 0;
-    char startMarker = '<';
-    char endMarker = '>';
-    char rc;
+   static boolean recvInProgress = false;
+   static byte ndx = 0;
+   char startMarker = '<';
+   char endMarker = '>';
+   char rc;
 
-    while (softSerial.available() > 0 && newData == false) {
-        rc = softSerial.read();
-
-        if (recvInProgress == true) {
-            if (rc != endMarker) {
-                receivedChars[ndx] = rc;
-                ndx++;
-                if (ndx >= numChars) {
-                    ndx = numChars - 1;
-                  }
-             }
-            else {
-                receivedChars[ndx] = '\0'; // terminate the string
-                recvInProgress = false;
-                ndx = 0;
-                newData = true;
-              } 
-          }
-
-        else if (rc == startMarker) {
-            recvInProgress = true;
-          } 
+  while (softSerial.available() > 0 && newData == false) {
+   rc = softSerial.read();
+   if (recvInProgress == true) {
+    if (rc != endMarker) {
+      receivedChars[ndx] = rc;
+      ndx++;
+      if (ndx >= numChars) {
+        ndx = numChars - 1;
+       }
       }
-}
+    else {
+      receivedChars[ndx] = '\0'; // terminate the string
+      recvInProgress = false;
+      ndx = 0;
+      newData = true;
+      } 
+    }
+  else if (rc == startMarker) {
+      recvInProgress = true;
+     } 
+   }
+ }
 
-//============
+//                               ___      _        
+//  _ __   __ _ _ __ ___  ___   /   \__ _| |_ __ _ 
+// | '_ \ / _` | '__/ __|/ _ \ / /\ / _` | __/ _` |
+// | |_) | (_| | |  \__ \  __// /_// (_| | || (_| |
+// | .__/ \__,_|_|  |___/\___/___,' \__,_|\__\__,_|
+// |_|                                             
 
 void parseData() {      // split the data to send into its parts
 
-    char * strtokIndx; // this is used by strtok() as an index
+ char * strtokIndx; // this is used by strtok() as an index
 
-    strtokIndx = strtok(tempChars, ","); //NULL is after first delimiter, before first delimiter use tempChars
-    oilTemp = atoi(strtokIndx);     // atoi = conver string to integer
+ strtokIndx = strtok(tempChars, ","); //NULL is after first delimiter, before first delimiter use tempChars
+ oilTemp = atoi(strtokIndx);     // atoi = conver string to integer
 
-    //2nd digit in serial sequence
-    strtokIndx = strtok(NULL, ",");
-    coolantTemp = atoi(strtokIndx);
+ //2nd digit in serial sequence
+ strtokIndx = strtok(NULL, ",");
+ coolantTemp = atoi(strtokIndx);
 
-    // //3rd digit etc..
-    // strtokIndx = strtok(NULL, ",");
-    // voltage = atoi(strtokIndx);
+ // //3rd digit etc..
+ // strtokIndx = strtok(NULL, ",");
+ // voltage = atoi(strtokIndx);
+}
+
+
+//    _____    __  _             _ _       
+//    \_   \/\ \ \/_\__   _____ | | |_ ___ 
+//     / /\/  \/ //_\\ \ / / _ \| | __/ __|
+///  \/ /_/ /\  /  _  \ V / (_) | | |_\__ \ "/"
+//  \____/\_\ \/\_/ \_/\_/ \___/|_|\__|___/
+
+void INAvolts() {
+  voltRead = (INA.getBusVoltage(), 2);
 }
 
 
@@ -369,11 +337,13 @@ void setup()
   Serial.begin(9600);
   softSerial.begin(9600);
 
-  //voltage
-    analogReference(INTERNAL1V1); // use ianalogReference(INTERNAL)nternal voltage reference
-                                //***CAUTION*** do not connect >1v to any analogRead pin!!!
-    for (int c = 0; c < arraySize -1; c++)  //initialise batArray to have all values at 12.5 - for all intents and purposes 'baseline' battery voltage
-      batArray[c] = 12.5;                   
+  //INA226 voltage sensor setup
+    Wire.begin();              
+    if (!INA.begin())
+      {
+        Serial.println("No connection to INA226. Please fix.");
+      }     
+    INA.setMaxCurrentShunt(1,0.002);
 
   //headlights I/O
     pinMode(Lite,OUTPUT);
@@ -460,13 +430,14 @@ void loop()
       headlightStatus = 0;
     }
 
-    batVolts();
-
     millis10 = millis();
   }
  
  if ( millis() >= millis200 + 200 ) {
-    //collect data from softSerial
+  //get voltage from INA226
+    INAvolts();  
+  
+  //collect data from softSerial
     recvWithStartEndMarkers();
     if (newData == true) {
       //nudat = 1;  //debugging
@@ -512,7 +483,7 @@ void loop()
 
     //Oil temp
       canvas.setTextColor(color2,black);
-      static byte value = 0;
+      static byte value = 0;  ///unused value????
       canvas.fillScreen(black); //erase canvas
       //establish cursor position based on number of digits 1, 2 or 3 (i.e 9, 19, 119) - basically make text right-aligned instead of default left-aligned
         if (oilTemp < 10) {
@@ -625,26 +596,26 @@ void loop()
     
     //battery voltage
       // Shift the decimal point right two digits and round off to an integer
-        int voltage = (batAvg * 100.0) + 0.5;
+        int voltage = (voltRead/*batAvg*/ * 100.0) + 0.5;
       // Extract each digit with the 'modulo' operator (%)
         char tensDigit = '0' + ((voltage / 1000) % 10);
         char onesDigit = '0' + ((voltage / 100) % 10);
-        char tenthsDigit =  '0' + ((voltage / 10) % 10);
+        char tenthsDigit =  '0' + (( voltage / 10) % 10);
         //char hundredsDigit =  '0' + (voltage % 10);
       //write to canvas
       canvas3.fillScreen(black);
       canvas3.setFont(&eightySixFont15);
       canvas3.setTextColor(color2);
-      if (batAvg < 1.0) {
+      if (voltRead/*batAvg*/ < 1.0) {
         canvas3.setCursor(2,19);
       }
-      else if (batAvg >= 1.0 && batAvg < 2.0) {
+      else if (voltRead/*batAvg*/ >= 1.0 && voltRead/*batAvg*/ < 2.0) {
         canvas3.setCursor(0,19);
       }
-      else if(batAvg >= 2.0 && batAvg < 10.0) {
+      else if(voltRead/*batAvg*/ >= 2.0 && voltRead/*batAvg*/ < 10.0) {
         canvas3.setCursor(2,19);
       }
-      else if (batAvg >= 10.0) {
+      else if (voltRead/*batAvg*/ >= 10.0) {
         canvas3.setCursor(0,19);
         canvas3.print(tensDigit);
       }
