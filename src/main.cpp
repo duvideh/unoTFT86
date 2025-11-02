@@ -320,7 +320,7 @@ void parseData() {      // split the data to send into its parts
 //  \____/\_\ \/\_/ \_/\_/ \___/|_|\__|___/
 
 void INAvolts() {
-  voltRead = (INA.getBusVoltage(), 2);
+  voltRead = INA.getBusVoltage();
 }
 
 
@@ -435,7 +435,11 @@ void loop()
  
  if ( millis() >= millis200 + 200 ) {
   //get voltage from INA226
-    INAvolts();  
+    INAvolts();
+    //testing
+    // tft.setCursor(0,35);
+    // tft.setTextColor(green);
+    // tft.print(voltRead,4);  
   
   //collect data from softSerial
     recvWithStartEndMarkers();
@@ -615,7 +619,7 @@ void loop()
       else if(voltRead/*batAvg*/ >= 2.0 && voltRead/*batAvg*/ < 10.0) {
         canvas3.setCursor(2,19);
       }
-      else if (voltRead/*batAvg*/ >= 10.0) {
+      else if (voltRead/*batAvg*/ >= 10.0) { 
         canvas3.setCursor(0,19);
         canvas3.print(tensDigit);
       }
