@@ -79,11 +79,14 @@
  uint16_t green = 0x07E0;
  uint16_t cyan = 0x07FF;
  uint16_t orange = 0xFD00;
+uint16_t orangeyRed = 0xFB42;
  uint16_t lightRed = 0xFD76;
  uint16_t greenDark = 0x05AB;
  uint16_t blueDark = 0x3997;
+
  uint16_t color = white;
  uint16_t color2 = red;
+
  uint16_t greenDim = green;
  uint16_t blueDim = blue;
  uint16_t redDim = lightRed;
@@ -204,8 +207,8 @@ void fastDrawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int
 //
 void dimmer() {  
   if (headlights == 1) {
-    color = orange;
-    color2 = red;
+    color = red;
+    color2 = orangeyRed;
     greenDim = greenDark;
     blueDim = blueDark;
     redDim = red;
@@ -219,6 +222,7 @@ void dimmer() {
    }
   //bitmaps
   //fastDrawBitmap(22, 74, canvas2.getBuffer(), W2, H2, color2, black);
+    tft.fillScreen(black);
     canvas4.fillScreen(black);
     canvas5.fillScreen(black);
     canvas6.fillScreen(black);
